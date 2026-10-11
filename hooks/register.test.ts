@@ -84,6 +84,15 @@ test('전환 모드: 원본 스크립트 장부를 읽는다 · OMC 요약이 �
   expect(await shown()).toBe('workspace · main ↑2 ✎3 · 열린 일 3 · status 입력창 위로')
 })
 
+test('세션 제목 훅의 luna 주제가 있으면 OMC 요약 대신 줄 끝에', async ($, on) => {
+  const g = world({ legacy: true })
+  g.install(on)
+  g.w.files.set('/h/workspace/.omc/state/session-summary-me-session.json', JSON.stringify({ summary: '멈춘 OMC 요약' }))
+  g.w.files.set('/h/.claude/session-title/sessions/me-session.json', JSON.stringify({ topic: '토큰 사용량 원인 분석' }))
+  const shown = await status($, on)
+  expect(await shown()).toBe('workspace · main ↑2 ✎3 · 열린 일 3 · 토큰 사용량 원인 분석')
+})
+
 test('Stop 이 미커밋·미푸시를 남기고, git 이 깨끗해지면 스스로 닫힌다', async ($, on) => {
   const g = world()
   g.install(on)

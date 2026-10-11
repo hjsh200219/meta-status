@@ -30,7 +30,7 @@ type Item = {
   check?: Check; closed?: boolean; by?: string; note?: string; _left?: string[]
 }
 type Edits = { transcript?: string; lane?: string; paths: Record<string, number> }
-type Where = { dir: string; legacy?: string }
+type Where = { dir: string; legacy?: string; titles: string }
 
 let where: Promise<Where> | undefined
 
@@ -161,7 +161,8 @@ async function locate($: EngineInterface): Promise<Where> {
     const cfg = slash(await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${home}/.claude`
     const noLegacy = await $.env.get('META_STATUS_NO_LEGACY')
     const cli = `${home}/workspace/scripts/open-loops.py`
-    return { dir: `${cfg}/open-loops`, legacy: !noLegacy && (await $.fs.exists(cli)) ? cli : undefined }
+    // 세션 제목 훅(session-title.py)은 CLAUDE_CONFIG_DIR 와 상관없이 ~/.claude 에 주제를 둔다
+    return { dir: `${cfg}/open-loops`, legacy: !noLegacy && (await $.fs.exists(cli)) ? cli : undefined, titles: `${home}/.claude/session-title/sessions` }
   })()
   return where
 }
@@ -628,8 +629,11 @@ async function refresh($: EngineInterface, cwd: string) {
   // 폴더는 git repo 밖일 때만 — repo 안에선 repo·브랜치로 충분하다
   const where = [repo ? '' : dir, repo, [branch, marks].filter(Boolean).join(' ')].filter(Boolean).join(' · ')
   await update($, head, () => where)
-  const sum = await readJson<{ summary?: string }>($, `${await $.session.root()}/.omc/state/session-summary-${await $.session.id()}.json`)
-  const note = (sum?.summary ?? '').replace(/[\r\n]+/g, ' ').slice(0, 40)
+  // 주제: 세션 제목 훅의 luna 요약 → 없으면 OMC HUD 요약(sessionSummary 를 켠 PC)
+  const sid = await $.session.id()
+  const topic = (await readJson<{ topic?: string }>($, `${(await locate($)).titles}/${sid}.json`))?.topic
+  const sum = topic ? undefined : await readJson<{ summary?: string }>($, `${await $.session.root()}/.omc/state/session-summary-${sid}.json`)
+  const note = (topic ?? sum?.summary ?? '').replace(/[\r\n]+/g, ' ').slice(0, 40)
   await update($, summary, () => note)
   await scanAgents($)
   return [where, open, note].filter(Boolean).join(' · ')

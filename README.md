@@ -13,7 +13,7 @@ workspace · main ↑2 ✎3 · 세션 요약      [에이전트 2] [열린 일 3
 | `✎3` | 수정·새 파일 수 (0이면 숨김) |
 | `[열린 일 3]` | 끝내지 못한 일 개수 버튼 — 누르거나 `/loops` 로 목록 패널 열기·닫기 |
 | `[에이전트 2]` | 지금 도는 에이전트 버튼 — 누르면 계정별(Claude 계정·edb·codex) 목록, 경과 시간·레인·지금 하는 도구 호출 |
-| `· 세션 요약` | oh-my-claudecode 가 만든 세션 요약(OMC `sessionSummary` 를 켠 PC 만) — 누르거나 `/prompts` 로 이 세션에서 입력한 프롬프트 패널 열기·닫기(최신 위) |
+| `· 세션 요약` | 세션 제목 훅(session-title)의 luna 주제, 없으면 oh-my-claudecode 세션 요약(OMC `sessionSummary` 를 켠 PC 만) — 누르거나 `/prompts` 로 이 세션에서 입력한 프롬프트 패널 열기·닫기(최신 위) |
 
 ## 설치
 
