@@ -30,7 +30,7 @@ type Item = {
   check?: Check; closed?: boolean; by?: string; note?: string; _left?: string[]
 }
 type Edits = { transcript?: string; lane?: string; paths: Record<string, number> }
-type Where = { dir: string; legacy?: string; titles: string }
+type Where = { dir: string; legacy?: string; titles: string; lanes: string }
 
 let where: Promise<Where> | undefined
 
@@ -162,9 +162,18 @@ async function locate($: EngineInterface): Promise<Where> {
     const noLegacy = await $.env.get('META_STATUS_NO_LEGACY')
     const cli = `${home}/workspace/scripts/open-loops.py`
     // 세션 제목 훅(session-title.py)은 CLAUDE_CONFIG_DIR 와 상관없이 ~/.claude 에 주제를 둔다
-    return { dir: `${cfg}/open-loops`, legacy: !noLegacy && (await $.fs.exists(cli)) ? cli : undefined, titles: `${home}/.claude/session-title/sessions` }
+    return { dir: `${cfg}/open-loops`, legacy: !noLegacy && (await $.fs.exists(cli)) ? cli : undefined, titles: `${home}/.claude/session-title/sessions`, lanes: `${home}/.claude/lane-status` }
   })()
   return where
+}
+
+// 레인(tmux DevOps1… · Secretary) 세션은 제목 훅이 주제를 sessions/ 대신 lane-status/<레인>.json 에 둔다
+async function laneTopic($: EngineInterface, sid: string): Promise<string | undefined> {
+  const dir = (await locate($)).lanes
+  for (const f of await $.fs.list(dir).catch(() => [])) {
+    const st = await readJson<{ session_id?: string; topic?: string }>($, `${dir}/${f.name}`)
+    if (st?.session_id === sid && st.topic) return st.topic
+  }
 }
 
 async function now($: EngineInterface) {
@@ -631,7 +640,7 @@ async function refresh($: EngineInterface, cwd: string) {
   await update($, head, () => where)
   // 주제: 세션 제목 훅의 luna 요약 → 없으면 OMC HUD 요약(sessionSummary 를 켠 PC)
   const sid = await $.session.id()
-  const topic = (await readJson<{ topic?: string }>($, `${(await locate($)).titles}/${sid}.json`))?.topic
+  const topic = (await readJson<{ topic?: string }>($, `${(await locate($)).titles}/${sid}.json`))?.topic ?? await laneTopic($, sid)
   const sum = topic ? undefined : await readJson<{ summary?: string }>($, `${await $.session.root()}/.omc/state/session-summary-${sid}.json`)
   const note = (topic ?? sum?.summary ?? '').replace(/[\r\n]+/g, ' ').slice(0, 40)
   await update($, summary, () => note)

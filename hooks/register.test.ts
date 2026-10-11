@@ -93,6 +93,16 @@ test('세션 제목 훅의 luna 주제가 있으면 OMC 요약 대신 줄 끝에
   expect(await shown()).toBe('workspace · main ↑2 ✎3 · 열린 일 3 · 토큰 사용량 원인 분석')
 })
 
+test('레인 세션은 lane-status 의 luna 주제를 줄 끝에', async ($, on) => {
+  const g = world({ legacy: true })
+  g.install(on)
+  g.w.files.set('/h/workspace/.omc/state/session-summary-me-session.json', JSON.stringify({ summary: '멈춘 OMC 요약' }))
+  g.w.files.set('/h/.claude/lane-status/DevOps1.json', JSON.stringify({ session_id: 'other', topic: '남의 레인' }))
+  g.w.files.set('/h/.claude/lane-status/Secretary.json', JSON.stringify({ session_id: 'me-session', topic: '600k 적용' }))
+  const shown = await status($, on)
+  expect(await shown()).toBe('workspace · main ↑2 ✎3 · 열린 일 3 · 600k 적용')
+})
+
 test('Stop 이 미커밋·미푸시를 남기고, git 이 깨끗해지면 스스로 닫힌다', async ($, on) => {
   const g = world()
   g.install(on)

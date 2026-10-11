@@ -1,6 +1,6 @@
 {
   "name": "meta-status",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "description": "Claude Code 입력창 위에 repo·브랜치·미푸시(↑)·수정 파일(✎)·에이전트·열린 일 버튼을 보이고, 세션이 끝내지 못한 일을 장부로 남긴다",
   "author": {
     "name": "hjsh200219"
