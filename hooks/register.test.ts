@@ -1,5 +1,5 @@
 import { test, expect, mock } from 'claude-code/testing'
-import { actOf, editWarning, parsePs, resultOf, subcommand, taskLine, transcriptDetail } from './register'
+import { actOf, catOf, editWarning, ordered, parsePs, resultOf, subcommand, taskLine, transcriptDetail } from './register'
 
 const out = (stdout: string, exitCode = 0) => ({ exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
 const CFG = '/h/.claude'
@@ -189,8 +189,8 @@ test('/loops 는 패널을 열고(종류·나이·누가·키) 다시 부르면 
   expect(opened).toMatchObject({ id: 'open-loops', title: '열린 일 2' })
   expect(r.text).toBe('열린 일 2건 — /loops 다시 입력하면 닫힘')
   expect(store.get('rows')).toEqual([
-    { kind: '메모', age: '2시간 전', who: '세션 abcdef12', text: '배포 뒤 확인', key: 'a' },
-    { kind: '확인 대기', age: '1분 전', who: 'DevOps2', text: '알림 확인', key: 'b' },
+    { kind: '메모', cat: '', age: '2시간 전', who: '세션 abcdef12', text: '배포 뒤 확인', key: 'a' },
+    { kind: '확인 대기', cat: '', age: '1분 전', who: 'DevOps2', text: '알림 확인', key: 'b' },
   ])
   // 다시 부르면 닫는다
   const r2: any = await $.command.run({ command: 'loops', args: '' } as any)
@@ -264,18 +264,39 @@ test('/workers 는 에이전트 패널을 열고 다시 부르면 닫는다', as
   expect(r2.text).toBe('에이전트 패널을 닫았습니다')
 })
 
-test('/loops close 번호 — 패널 순서(레인별 · 큰 묶음 먼저 · 최신 위)의 번호로 닫는다', async ($, on) => {
+test('/loops close 번호 — 패널 순서(분류별: 사람 확인 → 할 일 → 기다림 → 미분류 · 최신 위)의 번호로 닫는다', async ($, on) => {
   const g = world()
   g.install(on)
   const t = g.w.clock / 1000
-  g.w.files.set(`${DIR}/items/a.json`, JSON.stringify({ key: 'a', kind: 'note', ts: t - 7200, lane: 'DevOps2', text: '옛 일 — 설명 (C0AKC)' }))
-  g.w.files.set(`${DIR}/items/b.json`, JSON.stringify({ key: 'b', kind: 'note', ts: t - 60, lane: 'DevOps2', text: '새 일' }))
-  g.w.files.set(`${DIR}/items/c.json`, JSON.stringify({ key: 'c', kind: 'note', ts: t - 30, lane: 'DevOps1', text: '다른 레인' }))
+  g.w.files.set(`${DIR}/items/a.json`, JSON.stringify({ key: 'a', kind: 'note', ts: t - 7200, lane: 'DevOps2', text: '옛 일 — 설명 (C0AKC)', category: 'wait' }))
+  g.w.files.set(`${DIR}/items/b.json`, JSON.stringify({ key: 'b', kind: 'note', ts: t - 60, lane: 'DevOps2', text: '새 일', category: 'wait' }))
+  g.w.files.set(`${DIR}/items/c.json`, JSON.stringify({ key: 'c', kind: 'note', ts: t - 30, lane: 'DevOps1', text: '결정 대기', category: 'human' }))
+  g.w.files.set(`${DIR}/items/d.json`, JSON.stringify({ key: 'd', kind: 'note', ts: t - 10, lane: 'DevOps1', text: '분류 없음' }))
   await status($, on)
-  // 순서: DevOps2[b(1), a(2)] · DevOps1[c(3)] → 2번 = a
-  const r: any = await $.command.run({ command: 'loops', args: 'close 2' } as any)
+  // 순서: 사람 확인[c(1)] · 기다림[b(2), a(3)] · 미분류[d(4)] → 3번 = a
+  const r: any = await $.command.run({ command: 'loops', args: 'close 3' } as any)
   expect(r.text).toBe('닫음: a')
   expect(g.items().filter(i => i.closed).map(i => i.key)).toEqual(['a'])
+})
+
+test('ordered·catOf — 분류가 없으면 종류로 정하고(미푸시=사람 확인 · 미커밋=할 일) 정해진 순서로 묶는다', () => {
+  expect(catOf({ kind: 'unpushed' })).toBe('human')
+  expect(catOf({ kind: 'uncommitted' })).toBe('work')
+  expect(catOf({ kind: 'note', category: 'wait' })).toBe('wait')
+  expect(catOf({ kind: 'note', category: 'bogus' })).toBe('')
+  const row = (key: string, cat: string) => ({ kind: '메모', cat, age: '', who: '', text: key, key })
+  expect(ordered([row('x', ''), row('y', 'wait'), row('z', 'human'), row('w', 'work')]).map(([label, rs]) => [label, rs.map(r => r.key)]))
+    .toEqual([['사람 확인', ['z']], ['할 일', ['w']], ['기다림', ['y']], ['미분류', ['x']]])
+})
+
+test('open_loop_add 의 category 는 장부에 남고, 같은 키로 문구만 다시 적어도 유지된다 · /loops add 키 분류 내용', async ($, on) => {
+  const g = world()
+  g.install(on)
+  await $.tool.call({ tool: 'mcp__meta-status__open_loop_add', input: { key: 'k', text: '결정 대기', category: 'human' } } as any)
+  await $.tool.call({ tool: 'mcp__meta-status__open_loop_add', input: { key: 'k', text: '결정 대기(문구 수정)' } } as any)
+  expect(g.items()).toMatchObject([{ key: 'k', text: '결정 대기(문구 수정)', category: 'human' }])
+  await $.command.run({ command: 'loops', args: 'add j wait 10-17 이후 확인' } as any)
+  expect(g.items().find(i => i.key === 'j')).toMatchObject({ text: '10-17 이후 확인', category: 'wait' })
 })
 
 test('actOf — 도구 호출을 「도구 대표값」 한 줄로', () => {
