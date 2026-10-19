@@ -618,3 +618,12 @@ test('좁은 폭에서도 입력창 위 줄은 한 줄 — 왼쪽(위치·요약
     await ui.unmount()
   }
 })
+
+test('입력창 위 버튼 이름은 영어 — 「Agent N」·「Task N」', async ($, on) => {
+  const g = world({ legacy: true })
+  g.install(on)
+  await status($, on)
+  const ui = await ($ as any).ui.mount({ plugin: 'meta-status', surface: 'terminal', ...BAND })
+  expect((await ui.find({ key: 'loops' }))?.props.label).toMatch(/^Task \d+$/)
+  await ui.unmount()
+})
