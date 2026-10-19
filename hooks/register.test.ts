@@ -603,3 +603,18 @@ test('작업을 파일(stdin)로 넘긴 delegate·edb-p 는 그 파일의 작업
   ])
   expect(taskLine('IMPORTANT: Do NOT read\n# 필첵 PRD 검토\n')).toBe('필첵 PRD 검토')
 })
+
+test('좁은 폭에서도 입력창 위 줄은 한 줄 — 왼쪽(위치·요약)은 말줄임, 오른쪽 버튼은 줄지 않는다', async ($, on) => {
+  const g = world({ legacy: true })
+  g.install(on)
+  g.w.files.set('/h/workspace/.omc/state/session-summary-me-session.json', JSON.stringify({ summary: 'status 입력창 위로' }))
+  await status($, on)
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await ($ as any).ui.mount({ plugin: 'meta-status', surface, ...BAND })
+    expect((await ui.find({ type: 'Text', text: /workspace · main/ }))?.props.wrap).toBe('truncate-end')
+    expect((await ui.find({ type: 'Text', text: /status 입력창 위로/ }))?.props.wrap).toBe('truncate-end')
+    expect((await ui.find({ key: 'band-left' }))?.props).toMatchObject({ flexShrink: 1, minWidth: 0, overflow: 'hidden' })
+    expect((await ui.find({ key: 'band-right' }))?.props.flexShrink).toBe(0)
+    await ui.unmount()
+  }
+})

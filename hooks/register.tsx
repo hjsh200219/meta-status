@@ -729,6 +729,7 @@ export const register: Register = on => {
 
   // 입력창 위 한 줄: 왼쪽 repo · 브랜치 ↑✎ · 요약, 오른쪽 끝 「열린 일 N」 버튼(누르면 패널 열기·닫기)
   // 상태줄($.ui.status)은 앞에 「⚠ 플러그인 이름:」이 붙고 누를 수 없어 쓰지 않는다
+  // 좁은 폭에서도 한 줄 — 오른쪽 버튼은 줄지 않고 왼쪽 위치·요약이 말줄임으로 잘린다(10-19)
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const where = await read($, head)
     const sum = await read($, summary)
@@ -746,12 +747,18 @@ export const register: Register = on => {
     const { Box, Text, Button } = $.ui.resolve(e)
     return (
       <Box flexDirection="row" justifyContent="space-between" width="100%" paddingLeft={2} paddingTop={1}>
-        <Box flexDirection="row" gap={1} flexGrow={1}>
-          {where && <Text color="#ff8700">{where}</Text>}
+        <Box key="band-left" flexDirection="row" gap={1} flexGrow={1} flexShrink={1} minWidth={0} height={1} overflow="hidden">
+          {where && <Box flexShrink={1} minWidth={0}><Text color="#ff8700" wrap="truncate-end">{where}</Text></Box>}
           {sum && <Text dimColor>·</Text>}
-          {sum && <Button key="prompts" label={sum} onPress={async () => { await togglePrompts($) }} />}
+          {sum && (
+            <Box flexShrink={100} minWidth={0}>
+              <Button key="prompts" plain label={sum} onPress={async () => { await togglePrompts($) }}>
+                <Text wrap="truncate-end">{sum}</Text>
+              </Button>
+            </Box>
+          )}
         </Box>
-        <Box flexDirection="row" gap={1}>
+        <Box key="band-right" flexDirection="row" gap={1} flexShrink={0} paddingLeft={1}>
           {a > 0 && <Button key="agents" hover={{ scope: 'agents', color: 'blue' }} label={`에이전트 ${a}`} onPress={async () => { await toggleAgents($) }} />}
           {n > 0 && <Button key="loops" hover={{ scope: 'loops', color: 'error' }} label={`열린 일 ${n}`} onPress={async () => { await togglePane($) }} />}
         </Box>
