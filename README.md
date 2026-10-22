@@ -11,7 +11,7 @@ workspace · main ↑2 ✎3 · 세션 요약      [Agent 2] [Task 3]
 | `workspace · main` | origin repo 이름 · 브랜치 (repo 밖이면 폴더) |
 | `↑2` | push 안 한 커밋 수 (0이면 숨김) |
 | `✎3` | 수정·새 파일 수 (0이면 숨김) |
-| `[Task 3]` | 끝내지 못한 일 개수 버튼 — 누르거나 `/loops` 로 목록 패널 열기·닫기 |
+| `[Task 3]` | 끝내지 못한 일 개수 버튼 — 누르거나 `/loops-panel` 로 목록 패널 열기·닫기 |
 | `[Agent 2]` | 지금 도는 에이전트 버튼 — 누르면 계정별(Claude 계정·edb·codex) 목록, 경과 시간·레인·지금 하는 도구 호출 |
 | `· 세션 요약` | 세션 제목 훅(session-title)의 luna 주제(레인 세션은 `~/.claude/lane-status/<레인>.json`), 없으면 oh-my-claudecode 세션 요약(OMC `sessionSummary` 를 켠 PC 만) — 누르거나 `/prompts` 로 이 세션에서 입력한 프롬프트 패널 열기·닫기(최신 위) |
 
@@ -34,7 +34,7 @@ Claude Code 에서:
 | 미커밋 | 세션이 Edit·Write 로 고친 파일이 커밋 안 됨 | 그 파일들이 커밋되면 |
 | 미푸시 | 세션이 고친 repo 에 push 안 한 커밋 | push 하면 |
 | 변경 | 한 세션이 repo 2개 이상을 고침 (묶음 하나로) | 모든 repo 가 커밋·push 되면 |
-| 메모 | `/loops add` 또는 모델이 `open_loop_add` 로 적음 | `/loops close` · `open_loop_close` |
+| 메모 | `/loops-panel add` 또는 모델이 `open_loop_add` 로 적음 | `/loops-panel close` · `open_loop_close` |
 | 추정 | 최종 응답에 「확인하지 못했다」류 문장 (목록엔 숨김) | 다음 Stop 에 그 문장이 없으면 |
 
 분류(누가 움직여야 하나) — 패널·세션 시작 요약이 이 순서로 묶습니다:
@@ -52,12 +52,13 @@ Claude Code 에서:
 명령:
 
 ```
-/prompts                     이 세션 프롬프트 패널 열기·닫기 — 입력창 위 요약을 눌러도 같음(훅이 붙인 태그·도구 결과는 뺌)
+/prompts                     이 세션 프롬프트 패널 열기·닫기 — 입력창 위 요약을 눌러도 같음(턴 중간에 보낸 메시지 포함 · 훅이 붙인 태그·도구 결과·Stop 훅 되돌림은 뺌 · 이전 것은 휠·↓)
 /workers                     에이전트 패널 열기·닫기 — 서브에이전트의 이름·종류·모델·지시 원문·마지막 말·최근 도구 5개(✓ 끝 · ✗ 실패 · … 도는 중, 걸린 시간 → 결과 첫 줄)·총 횟수, 중첩은 부모 아래 └ 로 · edb-p·codex 는 pid·모델·지시·지금 도는 명령·대화 기록의 말과 최근 도구·명령줄 전체
-/loops                       열린 일 패널 열기·닫기(분류별 · 최신 위 · 번호 · 나이 · 누가 · 요약 한 줄)
-/loops add deploy-check wait 내일 09시 배포 결과 확인   (분류 human|work|wait 는 생략 가능)
-/loops close deploy-check      키로 닫기
-/loops close 3                 패널 번호로 닫기
+/loops-panel                 열린 일 패널 열기·닫기(분류별 · 최신 위 · 번호 · 나이 · 누가 · 요약 한 줄)
+/loops-panel add deploy-check wait 내일 09시 배포 결과 확인   (분류 human|work|wait 는 생략 가능)
+/loops-panel close deploy-check      키로 닫기
+/loops-panel close 3                 패널 번호로 닫기
+(0.7.3 부터 `/loops` 대신 `/loops-panel` — Claude Code 2.1.308 에 같은 이름의 기본 명령이 생겨 등록이 거절되고, 그 거절이 세션 시작 훅을 멈췄다)
 /where                            입력창 위 줄 다시 읽기
 /meta-status off                  입력창 위 줄 끄기(이 레인만 · 패널·장부는 그대로)
 /meta-status on                   다시 켜기 · 인자 없이 부르면 지금 상태
@@ -80,6 +81,6 @@ Claude Code 에서:
 - `/clear`·플러그인 재로드 직후 줄이 비어 있으면 그릴 때 한 번 다시 읽습니다(30초에 한 번까지). 화면에 「plugin panel hidden」이 보이면 플러그인 영역이 접힌 것이니 ctrl+x ctrl+a 로 펼칩니다.
 - 설문이 떠 있는 동안은 입력창 위 줄이 비켜 줍니다. 터미널 폭이 110칸 미만이면 패널이 옆이 아니라 대화 안에 열립니다. 「누가」 칸은 tmux 세션 이름, 없으면 세션 id 앞 8자리.
 
-- Windows: 상태 줄·`/workers`·`/loops`·`/where` 는 됩니다(0.5.12). 다만 `ps`·`tmux` 가 없어 `edb-p`·`codex exec` 같은 바깥 프로세스와 레인 이름은 안 보이고, 이 세션의 서브에이전트만 보입니다.
+- Windows: 상태 줄·`/workers`·`/loops-panel`·`/where` 는 됩니다(0.5.12). 다만 `ps`·`tmux` 가 없어 `edb-p`·`codex exec` 같은 바깥 프로세스와 레인 이름은 안 보이고, 이 세션의 서브에이전트만 보입니다.
 - `sed`·스크립트로 고친 파일은 편집 기록에 안 남습니다(Edit·Write·MultiEdit·NotebookEdit 만).
 - 입력창 위 줄·패널은 그 세션을 직접 띄운 화면에만 보입니다 — 터미널, 데스크톱 앱 Code 탭의 **로컬** 세션(확인). Remote Control 로 들여다보는 데스크톱·모바일 창과 claude.ai 클라우드 세션에는 안 보입니다(클라우드는 이 PC 의 플러그인이 없음).

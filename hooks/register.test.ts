@@ -168,7 +168,7 @@ test('open_loop_add 도구로 적고 open_loop_close 로 닫는다', async ($, o
   expect(g.items()[0].closed).toBe(true)
 })
 
-test('/loops 는 패널을 열고(종류·나이·누가·키) 다시 부르면 닫는다', async ($, on) => {
+test('/loops-panel 는 패널을 열고(종류·나이·누가·키) 다시 부르면 닫는다', async ($, on) => {
   const g = world()
   g.install(on)
   g.w.files.set(`${DIR}/items/a.json`, JSON.stringify({ key: 'a', kind: 'note', ts: g.w.clock / 1000 - 7200, session: 'abcdef1234', text: '배포 뒤 확인' }))
@@ -185,15 +185,15 @@ test('/loops 는 패널을 열고(종류·나이·누가·키) 다시 부르면 
   on('ui.open', ($: any, e: any) => { opened = e; panes = [{ id: e.id }]; return { value: { isPlaced: true } } })
   on('ui.close', ($: any, e: any) => { closed = e; panes = []; return { value: undefined } })
   await status($, on)
-  const r: any = await $.command.run({ command: 'loops', args: '' } as any)
+  const r: any = await $.command.run({ command: 'loops-panel', args: '' } as any)
   expect(opened).toMatchObject({ id: 'open-loops', title: '열린 일 2' })
-  expect(r.text).toBe('열린 일 2건 — /loops 다시 입력하면 닫힘')
+  expect(r.text).toBe('열린 일 2건 — /loops-panel 다시 입력하면 닫힘')
   expect(store.get('rows')).toEqual([
     { kind: '메모', cat: '', age: '2시간 전', who: '세션 abcdef12', text: '배포 뒤 확인', key: 'a' },
     { kind: '확인 대기', cat: '', age: '1분 전', who: 'DevOps2', text: '알림 확인', key: 'b' },
   ])
   // 다시 부르면 닫는다
-  const r2: any = await $.command.run({ command: 'loops', args: '' } as any)
+  const r2: any = await $.command.run({ command: 'loops-panel', args: '' } as any)
   expect(closed).toMatchObject({ id: 'open-loops' })
   expect(r2.text).toBe('열린 일 패널을 닫았습니다')
 })
@@ -264,7 +264,7 @@ test('/workers 는 에이전트 패널을 열고 다시 부르면 닫는다', as
   expect(r2.text).toBe('에이전트 패널을 닫았습니다')
 })
 
-test('/loops close 번호 — 패널 순서(분류별: 사람 확인 → 할 일 → 기다림 → 미분류 · 최신 위)의 번호로 닫는다', async ($, on) => {
+test('/loops-panel close 번호 — 패널 순서(분류별: 사람 확인 → 할 일 → 기다림 → 미분류 · 최신 위)의 번호로 닫는다', async ($, on) => {
   const g = world()
   g.install(on)
   const t = g.w.clock / 1000
@@ -274,7 +274,7 @@ test('/loops close 번호 — 패널 순서(분류별: 사람 확인 → 할 일
   g.w.files.set(`${DIR}/items/d.json`, JSON.stringify({ key: 'd', kind: 'note', ts: t - 10, lane: 'DevOps1', text: '분류 없음' }))
   await status($, on)
   // 순서: 사람 확인[c(1)] · 기다림[b(2), a(3)] · 미분류[d(4)] → 3번 = a
-  const r: any = await $.command.run({ command: 'loops', args: 'close 3' } as any)
+  const r: any = await $.command.run({ command: 'loops-panel', args: 'close 3' } as any)
   expect(r.text).toBe('닫음: a')
   expect(g.items().filter(i => i.closed).map(i => i.key)).toEqual(['a'])
 })
@@ -289,13 +289,13 @@ test('ordered·catOf — 분류가 없으면 종류로 정하고(미푸시=사�
     .toEqual([['사람 확인', ['z']], ['할 일', ['w']], ['기다림', ['y']], ['미분류', ['x']]])
 })
 
-test('open_loop_add 의 category 는 장부에 남고, 같은 키로 문구만 다시 적어도 유지된다 · /loops add 키 분류 내용', async ($, on) => {
+test('open_loop_add 의 category 는 장부에 남고, 같은 키로 문구만 다시 적어도 유지된다 · /loops-panel add 키 분류 내용', async ($, on) => {
   const g = world()
   g.install(on)
   await $.tool.call({ tool: 'mcp__meta-status__open_loop_add', input: { key: 'k', text: '결정 대기', category: 'human' } } as any)
   await $.tool.call({ tool: 'mcp__meta-status__open_loop_add', input: { key: 'k', text: '결정 대기(문구 수정)' } } as any)
   expect(g.items()).toMatchObject([{ key: 'k', text: '결정 대기(문구 수정)', category: 'human' }])
-  await $.command.run({ command: 'loops', args: 'add j wait 10-17 이후 확인' } as any)
+  await $.command.run({ command: 'loops-panel', args: 'add j wait 10-17 이후 확인' } as any)
   expect(g.items().find(i => i.key === 'j')).toMatchObject({ text: '10-17 이후 확인', category: 'wait' })
 })
 
@@ -470,7 +470,7 @@ test('줄이 비어 있으면 그리면서 한 번 다시 읽는다(/clear·재�
   await ui.unmount()
 })
 
-test('Windows(sh·ps·tmux 없음, HOME 대신 USERPROFILE): 상태 줄·/workers·/loops 가 산다', async ($, on) => {
+test('Windows(sh·ps·tmux 없음, HOME 대신 USERPROFILE): 상태 줄·/workers·/loops-panel 가 산다', async ($, on) => {
   const g = world({ noSh: true, env: { USERPROFILE: 'C:\\Users\\pys' } })
   g.install(on)
   let panes: { id: string }[] = []
@@ -480,7 +480,7 @@ test('Windows(sh·ps·tmux 없음, HOME 대신 USERPROFILE): 상태 줄·/worker
   const shown = await status($, on)
   expect(await shown()).toBe('workspace · main ↑2 ✎3')
   expect(((await $.command.run({ command: 'workers', args: '' } as any)) as any).text).toBe('에이전트 1개 — /workers 다시 입력하면 닫힘')
-  await $.command.run({ command: 'loops', args: 'add k 배포 확인' } as any)
+  await $.command.run({ command: 'loops-panel', args: 'add k 배포 확인' } as any)
   // macOS 시험 엔진은 C: 경로를 상대 경로로 보고 mod 폴더 앞에 붙인다 — 뒷부분만 본다
   const saved = [...g.w.files.keys()].filter(k => k.includes('C:/Users/pys/.claude/open-loops/items/'))
   expect(saved.length).toBe(1)
@@ -506,6 +506,16 @@ test('요약 버튼을 누르면 이 세션 프롬프트 패널(태그·도구 �
     { role: 'user', text: '<future-tag>엔진이 넣음</future-tag>', toolUses: [] },
     { role: 'user', text: '[Request interrupted by user]', toolUses: [] },
     { role: 'user', text: '두 번째 질문', toolUses: [] },
+    // 턴 중간에 보낸 메시지는 도구 결과 메시지에 붙어 온다(10-22) · Stop 훅 되돌림은 엔진이 넣은 것
+    { role: 'user', text: 'The user sent a new message while you were working:\n중간 질문\n둘째 줄\n\nThis is how Claude Code surfaces messages the user sends mid-turn — within the running turn.', toolUses: [], toolResults: [{ tool_use_id: 't2', text: 'ok' }] },
+    { role: 'user', text: 'Stop hook feedback:\n[R-no-debt] 되돌림', toolUses: [] },
+    // 같은 문구로 오는 작업 알림은 사람 것이 아니다 · Skill 도구로 불러온 스킬 본문(머리 없음)도 뺀다
+    { role: 'user', text: 'The user sent a new message while you were working:\n<task-notification>\nx hook was skipped\n</task-notification>\n\nThis is how Claude Code surfaces messages the user sends mid-turn.', toolUses: [], toolResults: [{ tool_use_id: 't3', text: 'ok' }] },
+    { role: 'assistant', text: '', toolUses: [{ tool_use_id: 's1', tool: 'Skill', input: { skill: 'sh:git-push' } }] },
+    { role: 'user', text: '', toolUses: [], toolResults: [{ tool_use_id: 's1', text: 'Launching skill: sh:git-push' }] },
+    { role: 'user', text: '# Git Push (엔진이 넣은 스킬 본문)', toolUses: [] },
+    { role: 'user', text: 'This session is being continued from a previous conversation that ran out of context. 요약', toolUses: [] },
+    { role: 'user', text: 'Another Claude session sent a message: <agent-message from="x">요청</agent-message>', toolUses: [] },
   ] }))
   await status($, on)
   await ($ as any).ui.mount({ plugin: 'meta-status', surface: 'terminal', ...BAND })
@@ -513,7 +523,7 @@ test('요약 버튼을 누르면 이 세션 프롬프트 패널(태그·도구 �
   expect(panes).toEqual([{ id: 'prompts' }])
   const ui = await ($.ui as any).mount({ plugin: 'meta-status', surface: 'terminal', component: 'Pane', props: {}, requestId: 'prompts' })
   const texts = (await ui.findAll({ type: 'Text' })).map((t: any) => t.text)
-  expect(texts.filter((t: string) => /질문|clear|무시|Base|task|엔진|Request/.test(t))).toEqual(['두 번째 질문', '/clear', '첫 질문'])
+  expect(texts.filter((t: string) => /질문|clear|무시|Base|task|엔진|Request|Stop hook|skipped|Git Push|continued|Another Claude/.test(t))).toEqual(['중간 질문 둘째 줄', '두 번째 질문', '/clear', '첫 질문'])
   await ui.unmount()
   await ($ as any).ui.press({ plugin: 'meta-status', key: 'prompts', surface: 'terminal' })
   expect(panes).toEqual([])
